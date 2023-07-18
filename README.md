@@ -94,7 +94,14 @@ By including this custom filter in your application's filter chain, you can retr
 
 
 
+////
 
+    @Bean
+    public MultipartHttpMessageReader multipartHttpMessageReader() {
+        MultipartHttpMessageReader reader = new MultipartHttpMessageReader();
+        reader.setMultipartResolver(new StandardServletMultipartResolver());
+        return reader;
+    }
 
 
 
