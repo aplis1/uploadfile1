@@ -31,3 +31,39 @@
                     return chain.filter(exchange);
                 });
 
+                ////
+                    private MultipartHttpMessageReader multipartReader;
+
+    public MultipartFormFilter(MultipartHttpMessageReader multipartReader) {
+        this.multipartReader = multipartReader;
+    }
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        return exchange.getRequest().getBody()
+                .collectList()
+                .flatMap(dataBuffers -> {
+                    byte[] byteArray = DataBufferUtils.join(dataBuffers).block().asByteBuffer().array();
+
+                    FilePart filePart = new FilePart("file", "filename", byteArray);
+                    YourPOJO pojo = new YourPOJO();
+                    pojo.setFile(filePart);
+
+                    exchange.getAttributes().put("pojo", pojo);
+                    return chain.filter(exchange);
+                });
+    }
+}
+In this example, you would need to inject the MultipartHttpMessageReader into the MultipartFormFilter class during instantiation.
+
+Replace YourPOJO with the actual class name representing your POJO, and adjust the logic for converting the Flux<DataBuffer> into a byte[] or DataBuffer based on your specific requirements.
+
+By including this custom filter in your application's filter chain, you can retrieve the MultipartFile from the request body and populate it in the corresponding field of your POJO.
+
+
+
+
+
+
+
+
