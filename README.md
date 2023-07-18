@@ -60,6 +60,42 @@ Replace YourPOJO with the actual class name representing your POJO, and adjust t
 
 By including this custom filter in your application's filter chain, you can retrieve the MultipartFile from the request body and populate it in the corresponding field of your POJO.
 
+////
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        return exchange.getFormData()
+                .flatMap(formData -> {
+                    YourRequestPOJO pojo = new YourRequestPOJO();
+                    // Extract the file part from the form data
+                    MultipartFile file = formData.getFirst("file");
+                    if (file != null) {
+                        // Set the file field in your POJO
+                        pojo.setFile(file);
+                    }
+
+                    // You can also extract other fields from the form data and populate them in your POJO
+                    // For example, if 'name' is another field in your POJO:
+                    String name = formData.getFirst("name");
+                    pojo.setName(name);
+
+                    // Pass the modified POJO to the next filter in the chain
+                    exchange.getAttributes().put("pojo", pojo);
+                    return chain.filter(exchange);
+                });
+    }
+
+In this example, we assume you are using Spring WebFlux framework. The exchange.getFormData() method returns a Mono<MultiValueMap<String, String>>, which represents the form data submitted with the request. You can use formData.getFirst("fieldName") to retrieve the file part and other fields by specifying their respective field names.
+
+Make sure to replace YourRequestPOJO with the actual class name representing your Request POJO, and update the field names and extraction logic according to your specific requirements.
+
+By including this custom filter in your application's filter chain, you can retrieve the MultipartFile and other fields from the request body and pass the modified POJO to subsequent filters or controllers in your application.
+
+
+
+
+
+
 
 
 
