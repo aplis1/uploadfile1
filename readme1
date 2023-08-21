@@ -1,0 +1,109 @@
+public static void main(String[] args) {
+        List<List<String>> packages = new ArrayList<>();
+        packages.add(List.of("file1.txt", "file2.txt"));
+        packages.add(List.of("file3.txt", "file4.txt"));
+        packages.add(List.of("file5.txt", "file6.txt"));
+
+        List<CompletableFuture<FileAnalysis>> packageVerificationFutures = new ArrayList<>();
+
+        for (int i = 0; i < packages.size(); i++) {
+            CompletableFuture<FileAnalysis> packageVerificationFuture = verifyPackageAsync("Package " + (i + 1));
+            packageVerificationFutures.add(packageVerificationFuture);
+        }
+
+        CompletableFuture<List<FileAnalysis>> allPackageVerifications = CompletableFuture.allOf(
+                packageVerificationFutures.toArray(new CompletableFuture[0])
+        ).thenApply(ignored -> packageVerificationFutures.stream()
+                .map(CompletableFuture::join)
+                .collect(Collectors.toList()));
+
+        CompletableFuture<Void> sendEmailFuture = allPackageVerifications.thenApply(fileAnalyses -> {
+            System.out.println("All package verifications completed.");
+
+            boolean anyVerified = fileAnalyses.stream()
+                    .anyMatch(FileAnalysis::isVerified);
+
+            if (anyVerified) {
+                sendEmailNotification("At least one package has been successfully verified.");
+            }
+            
+            return null;
+        });
+
+        // Wait for all tasks to complete, including the email notification
+        sendEmailFuture.join();
+    }
+
+    private static CompletableFuture<FileAnalysis> verifyPackageAsync(String fileAnalysisId) {
+        List<String> packageFiles = fetchPackageFiles(fileAnalysisId); // Replace with actual method to fetch package files
+
+        List<CompletableFuture<FileAnalysis>> fileAnalysisFutures = packageFiles.stream()
+                .map(fileName -> verifyFileAsync(fileName, fileAnalysisId))
+                .collect(Collectors.toList());
+
+        CompletableFuture<Void> allFilesVerified = CompletableFuture.allOf(
+                fileAnalysisFutures.toArray(new CompletableFuture[0])
+        );
+
+        return allFilesVerified.thenApply(ignored -> {
+            boolean packageVerified = fileAnalysisFutures.stream()
+                    .allMatch(fileAnalysisFuture -> {
+                        try {
+                            return fileAnalysisFuture.get().isVerified();
+                        } catch (InterruptedException | ExecutionException e) {
+                            e.printStackTrace();
+                            return false;
+                        }
+                    });
+
+            return new FileAnalysis(fileAnalysisId, packageVerified);
+        });
+    }
+
+    private static CompletableFuture<FileAnalysis> verifyFileAsync(String fileName, String fileAnalysisId) {
+        return CompletableFuture.supplyAsync(() -> {
+            // Perform verification logic here
+            // Simulating verification with a sleep
+            try {
+                Thread.sleep(2000); // Simulating some verification work
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            boolean verificationSuccess = true; // Simulating verification success
+            return new FileAnalysis(fileAnalysisId, verificationSuccess);
+        });
+    }
+
+    private static void sendEmailNotification(String message) {
+        // Simulate sending email notification
+        System.out.println("Email notification sent: " + message);
+    }
+
+    private static class FileAnalysis {
+        private final String fileAnalysisId;
+        private final boolean verified;
+
+        public FileAnalysis(String fileAnalysisId, boolean verified) {
+            this.fileAnalysisId = fileAnalysisId;
+            this.verified = verified;
+        }
+
+        public String getFileAnalysisId() {
+            return fileAnalysisId;
+        }
+
+        public boolean isVerified() {
+            return verified;
+        }
+    }
+
+    // Replace this method with actual logic to fetch package files
+    private static List<String> fetchPackageFiles(String fileAnalysisId) {
+        // Return the list of file names for the given package ID
+        // This method should be implemented based on your application's data source
+        // For now, we'll return a dummy list
+        List<String> dummyFiles = new ArrayList<>();
+        dummyFiles.add(fileAnalysisId + "_file1.txt");
+        dummyFiles.add(fileAnalysisId + "_file2.txt");
+        return dummyFiles;
+    }
